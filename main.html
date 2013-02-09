@@ -61,21 +61,35 @@
 			var tweet = document.createElement("td");
 			var time = document.createElement("td");
 			
-			// makes urls
-			var dataString = data.text;
+			// makes links
 			var text = [];
 			var urls = data.entities.urls;
-			for (var i = 0; i < urls.length; i++) {
-				text.push(dataString.substring(0, urls[i].indices[0]));
-				text.push(dataString.substring(urls[i].indices[0], urls[i].indices[1]).link(urls[i].expanded_url));
-				if (i == urls.length - 1)
-					text.push(dataString.substring(urls[i].indices[1]));
-				else
-					dataString = dataString.substring(urls[i].indices[1]);
+			var shouts = data.entities.user_mentions;
+			var urlIndex = 0;
+			var shoutIndex = 0;
+			var stringIndex = 0;
+			
+			while (urlIndex < urls.length || shoutIndex < shouts.length) {
+				if (shoutIndex == shouts.length || urlIndex < urls.length && urls[urlIndex].indices[0] < shouts[shoutIndex].indices[0]) {
+					text.push(data.text.substring(stringIndex, urls[urlIndex].indices[0]));
+					text.push(data.text.substring(urls[urlIndex].indices[0], urls[urlIndex].indices[1]).link(urls[urlIndex].expanded_url));
+					stringIndex = urls[urlIndex].indices[1];
+					urlIndex++;
+					if (urlIndex == urls.length && shoutIndex == shouts.length)
+						text.push(data.text.substring(urls[urlIndex - 1].indices[1]));
+				} else {
+					text.push(data.text.substring(stringIndex, shouts[shoutIndex].indices[0]));
+					text.push(data.text.substring(shouts[shoutIndex].indices[0], shouts[shoutIndex].indices[1]).link("javascript:newUser('@" + shouts[shoutIndex].screen_name + "')"));
+					stringIndex = shouts[shoutIndex].indices[1];
+					shoutIndex++;
+					if (urlIndex == urls.length && shoutIndex == shouts.length)
+						text.push(data.text.substring(shouts[shoutIndex - 1].indices[1]));
+				}
 			}
-			if (urls.length == 0)
-				text.push(data.text);
 
+			if (urls.length == 0 && shouts.length == 0)
+				text.push(data.text);
+			
 			for (var i = 0; i < text.length; i++)
 				$(tweet).append(text[i]);
 			$(time).append(trimTime(data.created_at));
@@ -123,6 +137,11 @@
 				year = "0" + year;
 
 			return date.getDate()  + " " + monthString + " " + (year) + " - " + hours + ":" + minutes + " " + am;
+		}
+	
+		function newUser(handle) {
+			$('#textbox').attr("value", handle);
+			getTweets();
 		}
 	</script>
 	<style type="text/css">
